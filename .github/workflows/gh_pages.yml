@@ -34,11 +34,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: 'bun'
       - name: Install dependencies
-        run: npm ci
+        run: bun ci
       - name: Build
-        run: npm run build
+        run: bun run build
       - name: Create CNAME
         run: cd .output && echo "design.williamwestwood.com" > CNAME && cd ..
       - name: Setup Pages
