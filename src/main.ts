@@ -10,12 +10,20 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import RenderPixelatedPass from './RenderPixelatedPass.ts';
 import PixelatePass from './PixelatePass';
 
+import * as MAT from './materials.ts';
+
 let camera: THREE.Camera,
   scene: THREE.Scene,
   renderer: THREE.WebGLRenderer,
   composer: EffectComposer;
 let controls: OrbitControls;
 let gui: GUI;
+
+const animationParams = {
+  speed: 1.5,
+  strength: 0.5,
+  enabled: true,
+};
 
 init();
 animate();
@@ -29,9 +37,11 @@ function init() {
     window.innerHeight
   );
 
-  let pixelSize = { value: 4 };
+  let shaderOptions = { pixelSize: 4 };
 
-  let renderResolution = screenResolution.clone().divideScalar(pixelSize.value);
+  let renderResolution = screenResolution
+    .clone()
+    .divideScalar(shaderOptions.pixelSize);
 
   renderResolution.x |= 0;
   renderResolution.y |= 0;
@@ -65,9 +75,12 @@ function init() {
   );
   composer.addPass(pixelRenderPass);
 
-  gui.add(pixelSize, 'value', 1, 10, 1).onChange((value: number) => {
-    pixelRenderPass.setPixelSize(value);
-  });
+  let shaderFolder = gui.addFolder('Pixel Shader');
+  shaderFolder
+    .add(shaderOptions, 'pixelSize', 1, 10, 1)
+    .onChange((value: number) => {
+      pixelRenderPass.setPixelSize(value);
+    });
 
   // composer.addPass(new RenderPixelatedPass(renderResolution, scene, camera));
   let bloomPass = new UnrealBloomPass(screenResolution, 0.4, 0.1, 0.9);
@@ -86,31 +99,74 @@ function init() {
 
   controls.update();
 
-  const texLoader = new THREE.TextureLoader();
-  const tex_checker = pixelTex(
-    texLoader.load(
-      'https://threejsfundamentals.org/threejs/resources/images/checker.png'
-    )
-  );
-  const tex_checker2 = pixelTex(
-    texLoader.load(
-      'https://threejsfundamentals.org/threejs/resources/images/checker.png'
-    )
-  );
-  tex_checker.repeat.set(3, 3);
-  tex_checker2.repeat.set(1.5, 1.5);
-
+  // Animation
+  {
+    const animationFolder = gui.addFolder('Animation');
+    animationFolder.add(animationParams, 'enabled');
+    animationFolder.add(animationParams, 'speed', 0.1, 5);
+    animationFolder.add(animationParams, 'strength', 0, 1);
+  }
   // Geometry
   {
+    let meshFolder = gui.addFolder('Mesh');
+    let windowsFolder = meshFolder.addFolder('Windows');
+
     const loader = new GLTFLoader();
 
     const modelScale = 0.15;
 
     loader.load('/models/model.gltf', (gltf) => {
       gltf.scene.scale.set(modelScale, modelScale, modelScale);
-      gltf.scene.castShadow = true;
-      gltf.scene.receiveShadow = true;
+
+      // let bonesFolder = gui.addFolder('model').addFolder('Bones');
+
+      gltf.scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.receiveShadow = true;
+          child.castShadow = true;
+
+          // console.log(child.name.toLowerCase());
+
+          const name = child.name.toLowerCase();
+          // console.log(name);
+
+          if (name.includes('building')) {
+            child.material = MAT.buildingMat;
+          } else if (name.includes('window')) {
+            child.material = new MAT.WindowMaterial();
+            windowsFolder.add(child.material, 'on');
+          } else if (name.includes('carpark')) {
+            child.material = MAT.carParkMat;
+          } else if (name.includes('tarmac')) {
+            child.material = MAT.tarmacMat;
+          } else if (name.includes('armature')) {
+            console.log('armature', child);
+          } else {
+            child.material = MAT.errorMat;
+          }
+        } else if (child instanceof THREE.Bone) {
+          console.log('bone', child);
+          if (
+            !child.name.toLowerCase().includes('shoulder') &&
+            !child.name.toLowerCase().includes('neutral')
+          ) {
+            // Add random seed for each bone
+            child.userData.seed = Math.random() * 1000;
+            child.userData.initialX = child.rotation.x;
+            child.userData.initialZ = child.rotation.z;
+            // let boneFolder = bonesFolder.addFolder(child.name);
+            // boneFolder.add(child.rotation, 'x', -1, 1);
+            // boneFolder.add(child.rotation, 'z', -1, 1);
+          }
+        } else {
+          // console.log('not mesh', child);
+        }
+      });
+
+      // gltf.scene.castShadow = true;
+      // gltf.scene.receiveShadow = true;
       console.log(gltf.scene);
+      console.log(gltf);
       scene.add(gltf.scene);
     });
   }
@@ -167,19 +223,28 @@ function init() {
     targetFolder.add(target.position, 'z', -5, 5);
     // targetFolder.add(target.position, 'y', 0, 20);
   }
+
+  gui.folders.forEach((x) => x.close());
 }
 
 function animate() {
+  if (animationParams.enabled) {
+    scene.traverse((child) => {
+      if (child instanceof THREE.Bone) {
+        if (child.userData.seed !== undefined) {
+          const time = Date.now() * 0.001 * animationParams.speed;
+          const seed = child.userData.seed;
+
+          // Use different sine waves with offsets for more chaotic movement
+          child.rotation.x = Math.sin(time + seed) * animationParams.strength;
+          child.rotation.z =
+            Math.cos(time * 1.3 + seed * 2) * animationParams.strength;
+        }
+      }
+    });
+  }
+
   requestAnimationFrame(animate);
 
   composer.render();
-}
-
-function pixelTex(tex: THREE.Texture) {
-  tex.minFilter = THREE.NearestFilter;
-  tex.magFilter = THREE.NearestFilter;
-  tex.generateMipmaps = false;
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.RepeatWrapping;
-  return tex;
 }
