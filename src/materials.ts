@@ -1,10 +1,4 @@
-import {
-  Color,
-  Line,
-  LinearFilter,
-  MeshPhongMaterial,
-  TextureLoader,
-} from 'three';
+import { Color, LinearFilter, MeshPhongMaterial, TextureLoader } from 'three';
 
 // Building Material
 
