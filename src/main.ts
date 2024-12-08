@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GUI } from 'lil-gui';
+// import { GUI } from 'https://cdn.jsdelivr.net/npm/lil-gui@0.20/+esm';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { GLTFLoader } from 'three/examples/jsm/Addons.js';
