@@ -11,6 +11,7 @@ import RenderPixelatedPass from './RenderPixelatedPass.ts';
 import PixelatePass from './PixelatePass';
 
 import * as MAT from './materials.ts';
+import { Sky } from './sky';
 
 let camera: THREE.Camera,
   scene: THREE.Scene,
@@ -54,7 +55,7 @@ function init() {
     1,
     -1,
     0.01,
-    10
+    1100
   );
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x151729);
@@ -98,6 +99,22 @@ function init() {
   camera.rotation.z = 0.29;
 
   controls.update();
+
+  // Add sky before other lights
+  const sky = new Sky();
+  sky.setTime('13:15');
+
+  gui
+    .addFolder('Sky')
+    .add(sky, 'setTime', 0, 24, 0.25)
+    .onChange((value: number) => {
+      sky.setTime(
+        String(value).split('.')[0] +
+          Number('0.' + String(value).split('.')[1]) * 60
+      );
+    });
+
+  sky.addToScene(scene);
 
   // Animation
   {
@@ -145,7 +162,7 @@ function init() {
             child.material = MAT.errorMat;
           }
         } else if (child instanceof THREE.Bone) {
-          console.log('bone', child);
+          // console.log('bone', child);
           if (
             !child.name.toLowerCase().includes('shoulder') &&
             !child.name.toLowerCase().includes('neutral')
@@ -159,7 +176,7 @@ function init() {
             // boneFolder.add(child.rotation, 'z', -1, 1);
           }
         } else {
-          // console.log('not mesh', child);
+          console.log('unhandled object', child.name, child.type);
         }
       });
 
@@ -174,9 +191,9 @@ function init() {
   // Lights
   let lightsFolder = gui.addFolder('Lights');
 
-  // Ambient Light
+  // Ambient Light with reduced intensity since sky adds light
   {
-    let ambientLight = new THREE.AmbientLight(0x9a9996, 8.4);
+    let ambientLight = new THREE.AmbientLight(0x9a9996, 4);
     scene.add(ambientLight);
 
     let folder = lightsFolder.addFolder('Ambient Light');
