@@ -173,10 +173,7 @@ function init() {
     loader.load('/models/model.gltf', (gltf) => {
       gltf.scene.scale.set(modelScale, modelScale, modelScale);
 
-      // let bonesFolder = gui.addFolder('model').addFolder('Bones');
-
       gltf.scene.traverse((child) => {
-        // if (child instanceof THREE.Mesh) {
         child.receiveShadow = true;
         child.castShadow = true;
 
@@ -187,66 +184,45 @@ function init() {
         } else if (child instanceof THREE.Bone) {
           setupBone(child);
         } else {
-          console.log('unhandled object', child.name, child.type);
+          if (child.name.toLowerCase().includes('streetlight')) {
+            const streetSpotLight = new THREE.SpotLight(
+              0xff8800, // warm color
+              0.5, // increased intensity
+              10, // increased distance
+              Math.PI / 4, // wider angle
+              0.75, // penumbra
+              2
+            );
+
+            // Scale position to match model scale
+            const scaledPosition = child.position.multiplyScalar(modelScale);
+            streetSpotLight.position.copy(scaledPosition);
+
+            // Set up target
+            const target = new THREE.Object3D();
+            target.position.set(
+              scaledPosition.x,
+              0, // target at ground level
+              scaledPosition.z
+            );
+            scene.add(target);
+            streetSpotLight.target = target;
+
+            streetSpotLight.castShadow = true;
+            scene.add(streetSpotLight);
+
+            // Add controls
+            const streetLightFolder = gui.addFolder(
+              'Street Light ' + child.name
+            );
+            streetLightFolder.add(streetSpotLight, 'intensity', 0, 1);
+            streetLightFolder.add(streetSpotLight, 'angle', 0, Math.PI / 2);
+            streetLightFolder.add(streetSpotLight, 'penumbra', 0, 1);
+            streetLightFolder.close();
+          } else {
+            console.log('unhandled object', child.name, child.type);
+          }
         }
-
-        // console.log(child.name.toLowerCase());
-
-        //   const name = child.name.toLowerCase();
-
-        //   if (name.includes('building')) {
-        //     if (name.includes('window')) {
-        //       child.material = new MAT.WindowMaterial();
-        //       windowsFolder.add(child.material, 'on');
-        //     } else {
-        //       child.material = MAT.buildingMat;
-        //     }
-        //   } else if (name.includes('carpark')) {
-        //     child.material = MAT.carParkMat;
-        //   } else if (name.includes('tarmac')) {
-        //     child.material = MAT.tarmacMat;
-        //   } else if (name.includes('tube')) {
-        //     child.material = new MAT.RandomColour();
-        //   } else if (name.includes('car')) {
-        //     console.log('car', child.name);
-        //     if (name.includes('body')) {
-        //       console.log('body', child.name);
-        //       child.material = new THREE.MeshPhongMaterial({ color: 0xffffff });
-        //     } else if (name.includes('window')) {
-        //       child.material = new MAT.WindowMaterial();
-        //       child.material.on = false;
-        //       windowsFolder.add(child.material, 'on');
-        //     } else if (name.includes('gray') || name.includes('wheel')) {
-        //       child.material = MAT.grayMat;
-        //     } else if (name.includes('tyre')) {
-        //       child.material = MAT.tyreMat;
-        //     } else if (name.includes('headlight')) {
-        //       child.material = MAT.headlightMat;
-        //     } else if (name.includes('taillight')) {
-        //       child.material = MAT.taillightMat;
-        //     } else {
-        //       child.material = new MAT.RandomBrightColour();
-        //     }
-        //   } else {
-        //     child.material = MAT.errorMat;
-        //   }
-        // } else if (child instanceof THREE.Bone) {
-        //   // console.log('bone', child);
-        //   if (
-        //     !child.name.toLowerCase().includes('shoulder') &&
-        //     !child.name.toLowerCase().includes('neutral')
-        //   ) {
-        //     // Add random seed for each bone
-        //     child.userData.seed = Math.random() * 1000;
-        //     child.userData.initialX = child.rotation.x;
-        //     child.userData.initialZ = child.rotation.z;
-        //     // let boneFolder = bonesFolder.addFolder(child.name);
-        //     // boneFolder.add(child.rotation, 'x', -1, 1);
-        //     // boneFolder.add(child.rotation, 'z', -1, 1);
-        //   }
-        // } else {
-        //   console.log('unhandled object', child.name, child.type);
-        // }
       });
 
       // gltf.scene.castShadow = true;
@@ -262,7 +238,7 @@ function init() {
 
   // Ambient Light with reduced intensity since sky adds light
   {
-    let ambientLight = new THREE.AmbientLight(0x9a9996, 4);
+    let ambientLight = new THREE.AmbientLight(0x9a9996, 2.5);
     scene.add(ambientLight);
 
     let folder = lightsFolder.addFolder('Ambient Light');
@@ -271,18 +247,18 @@ function init() {
   }
 
   // Directional Light
-  {
-    let directionalLight = new THREE.DirectionalLight(0xfffc9c, 0.5);
-    directionalLight.position.set(100, 100, 100);
-    directionalLight.castShadow = true;
-    // directionalLight.shadow.radius = 0
-    directionalLight.shadow.mapSize.set(2048, 2048);
-    scene.add(directionalLight);
+  // {
+  //   let directionalLight = new THREE.DirectionalLight(0xfffc9c, 0.5);
+  //   directionalLight.position.set(100, 100, 100);
+  //   directionalLight.castShadow = true;
+  //   // directionalLight.shadow.radius = 0
+  //   directionalLight.shadow.mapSize.set(2048, 2048);
+  //   scene.add(directionalLight);
 
-    let folder = lightsFolder.addFolder('Directional Light');
-    folder.add(directionalLight, 'intensity', 0, 1);
-    folder.addColor(directionalLight, 'color');
-  }
+  //   let folder = lightsFolder.addFolder('Directional Light');
+  //   folder.add(directionalLight, 'intensity', 0, 1);
+  //   folder.addColor(directionalLight, 'color');
+  // }
 
   // Spot Light
   {

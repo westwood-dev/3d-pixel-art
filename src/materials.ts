@@ -151,4 +151,7 @@ export const materialMappings: MaterialMappings = {
   'bus-headlights': { material: headlightMat },
   'bus-taillights': { material: taillightMat },
   bus: { material: () => new RandomBrightColour() },
+  'streetlight-mesh': {
+    material: () => new MeshPhongMaterial({ color: 0xefefef }),
+  },
 };
