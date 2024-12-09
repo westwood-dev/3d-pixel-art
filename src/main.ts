@@ -102,16 +102,16 @@ function init() {
 
   // Add sky before other lights
   const sky = new Sky();
-  sky.setTime('13:15');
+  sky.setTime('12:00');
 
-  gui
-    .addFolder('Sky')
-    .add(sky, 'setTime', 0, 24, 0.25)
+  const skyFolder = gui.addFolder('Sky');
+  skyFolder.add({ time: 12 }, 'time', 0, 24).onChange((value: number) => {
+    sky.setTime(value);
+  });
+  skyFolder
+    .add({ rotation: 45 }, 'rotation', 0, 360)
     .onChange((value: number) => {
-      sky.setTime(
-        String(value).split('.')[0] +
-          Number('0.' + String(value).split('.')[1]) * 60
-      );
+      sky.setRotation(value);
     });
 
   sky.addToScene(scene);
@@ -125,6 +125,44 @@ function init() {
   }
   // Geometry
   {
+    function assignMaterial(
+      mesh: THREE.Mesh,
+      name: string,
+      windowsFolder: GUI
+    ) {
+      const nameLower = name.toLowerCase();
+
+      // Try to find the most specific matching material first
+      const materialKey = Object.keys(MAT.materialMappings).find((key) => {
+        const parts = key.split('-');
+        return parts.every((part) => nameLower.includes(part));
+      });
+
+      if (!materialKey) {
+        mesh.material = MAT.errorMat;
+        return;
+      }
+
+      const config = MAT.materialMappings[materialKey];
+      mesh.material =
+        typeof config.material === 'function'
+          ? config.material()
+          : config.material;
+
+      if (config.addToGUI && 'on' in mesh.material) {
+        windowsFolder.add(mesh.material, 'on');
+      }
+    }
+
+    function setupBone(bone: THREE.Bone) {
+      const nameLower = bone.name.toLowerCase();
+      if (!nameLower.includes('shoulder') && !nameLower.includes('neutral')) {
+        bone.userData.seed = Math.random() * 1000;
+        bone.userData.initialX = bone.rotation.x;
+        bone.userData.initialZ = bone.rotation.z;
+      }
+    }
+
     let meshFolder = gui.addFolder('Mesh');
     let windowsFolder = meshFolder.addFolder('Windows');
 
@@ -138,46 +176,77 @@ function init() {
       // let bonesFolder = gui.addFolder('model').addFolder('Bones');
 
       gltf.scene.traverse((child) => {
+        // if (child instanceof THREE.Mesh) {
+        child.receiveShadow = true;
+        child.castShadow = true;
+
         if (child instanceof THREE.Mesh) {
           child.receiveShadow = true;
           child.castShadow = true;
-
-          // console.log(child.name.toLowerCase());
-
-          const name = child.name.toLowerCase();
-          // console.log(name);
-
-          if (name.includes('building')) {
-            child.material = MAT.buildingMat;
-          } else if (name.includes('window')) {
-            child.material = new MAT.WindowMaterial();
-            windowsFolder.add(child.material, 'on');
-          } else if (name.includes('carpark')) {
-            child.material = MAT.carParkMat;
-          } else if (name.includes('tarmac')) {
-            child.material = MAT.tarmacMat;
-          } else if (name.includes('armature')) {
-            console.log('armature', child);
-          } else {
-            child.material = MAT.errorMat;
-          }
+          assignMaterial(child, child.name, windowsFolder);
         } else if (child instanceof THREE.Bone) {
-          // console.log('bone', child);
-          if (
-            !child.name.toLowerCase().includes('shoulder') &&
-            !child.name.toLowerCase().includes('neutral')
-          ) {
-            // Add random seed for each bone
-            child.userData.seed = Math.random() * 1000;
-            child.userData.initialX = child.rotation.x;
-            child.userData.initialZ = child.rotation.z;
-            // let boneFolder = bonesFolder.addFolder(child.name);
-            // boneFolder.add(child.rotation, 'x', -1, 1);
-            // boneFolder.add(child.rotation, 'z', -1, 1);
-          }
+          setupBone(child);
         } else {
           console.log('unhandled object', child.name, child.type);
         }
+
+        // console.log(child.name.toLowerCase());
+
+        //   const name = child.name.toLowerCase();
+
+        //   if (name.includes('building')) {
+        //     if (name.includes('window')) {
+        //       child.material = new MAT.WindowMaterial();
+        //       windowsFolder.add(child.material, 'on');
+        //     } else {
+        //       child.material = MAT.buildingMat;
+        //     }
+        //   } else if (name.includes('carpark')) {
+        //     child.material = MAT.carParkMat;
+        //   } else if (name.includes('tarmac')) {
+        //     child.material = MAT.tarmacMat;
+        //   } else if (name.includes('tube')) {
+        //     child.material = new MAT.RandomColour();
+        //   } else if (name.includes('car')) {
+        //     console.log('car', child.name);
+        //     if (name.includes('body')) {
+        //       console.log('body', child.name);
+        //       child.material = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        //     } else if (name.includes('window')) {
+        //       child.material = new MAT.WindowMaterial();
+        //       child.material.on = false;
+        //       windowsFolder.add(child.material, 'on');
+        //     } else if (name.includes('gray') || name.includes('wheel')) {
+        //       child.material = MAT.grayMat;
+        //     } else if (name.includes('tyre')) {
+        //       child.material = MAT.tyreMat;
+        //     } else if (name.includes('headlight')) {
+        //       child.material = MAT.headlightMat;
+        //     } else if (name.includes('taillight')) {
+        //       child.material = MAT.taillightMat;
+        //     } else {
+        //       child.material = new MAT.RandomBrightColour();
+        //     }
+        //   } else {
+        //     child.material = MAT.errorMat;
+        //   }
+        // } else if (child instanceof THREE.Bone) {
+        //   // console.log('bone', child);
+        //   if (
+        //     !child.name.toLowerCase().includes('shoulder') &&
+        //     !child.name.toLowerCase().includes('neutral')
+        //   ) {
+        //     // Add random seed for each bone
+        //     child.userData.seed = Math.random() * 1000;
+        //     child.userData.initialX = child.rotation.x;
+        //     child.userData.initialZ = child.rotation.z;
+        //     // let boneFolder = bonesFolder.addFolder(child.name);
+        //     // boneFolder.add(child.rotation, 'x', -1, 1);
+        //     // boneFolder.add(child.rotation, 'z', -1, 1);
+        //   }
+        // } else {
+        //   console.log('unhandled object', child.name, child.type);
+        // }
       });
 
       // gltf.scene.castShadow = true;
