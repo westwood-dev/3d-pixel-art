@@ -173,6 +173,8 @@ function init() {
     loader.load('/models/model.gltf', (gltf) => {
       gltf.scene.scale.set(modelScale, modelScale, modelScale);
 
+      const streetlightsFolder = gui.addFolder('Streetlights');
+
       gltf.scene.traverse((child) => {
         child.receiveShadow = true;
         child.castShadow = true;
@@ -212,7 +214,7 @@ function init() {
             scene.add(streetSpotLight);
 
             // Add controls
-            const streetLightFolder = gui.addFolder(
+            const streetLightFolder = streetlightsFolder.addFolder(
               'Street Light ' + child.name
             );
             streetLightFolder.add(streetSpotLight, 'intensity', 0, 1);
@@ -225,6 +227,8 @@ function init() {
         }
       });
 
+      streetlightsFolder.close();
+
       // gltf.scene.castShadow = true;
       // gltf.scene.receiveShadow = true;
       console.log(gltf.scene);
@@ -234,56 +238,11 @@ function init() {
   }
 
   // Lights
-  let lightsFolder = gui.addFolder('Lights');
 
   // Ambient Light with reduced intensity since sky adds light
   {
     let ambientLight = new THREE.AmbientLight(0x9a9996, 2.5);
     scene.add(ambientLight);
-
-    let folder = lightsFolder.addFolder('Ambient Light');
-    folder.add(ambientLight, 'intensity', 0, 15);
-    folder.addColor(ambientLight, 'color');
-  }
-
-  // Directional Light
-  // {
-  //   let directionalLight = new THREE.DirectionalLight(0xfffc9c, 0.5);
-  //   directionalLight.position.set(100, 100, 100);
-  //   directionalLight.castShadow = true;
-  //   // directionalLight.shadow.radius = 0
-  //   directionalLight.shadow.mapSize.set(2048, 2048);
-  //   scene.add(directionalLight);
-
-  //   let folder = lightsFolder.addFolder('Directional Light');
-  //   folder.add(directionalLight, 'intensity', 0, 1);
-  //   folder.addColor(directionalLight, 'color');
-  // }
-
-  // Spot Light
-  {
-    // let spotLight = new THREE.SpotLight(0xff8800, 1, 10, Math.PI / 16, 0.02, 2);
-    let spotLight = new THREE.SpotLight(0xff8800, 1, 10, Math.PI / 16, 0, 2);
-    spotLight.position.set(0, 2, 0);
-    let target = spotLight.target; //= new THREE.Object3D()
-    scene.add(target);
-    target.position.set(0, 0, 0);
-    spotLight.castShadow = true;
-    scene.add(spotLight);
-    // spotLight.shadow.radius = 0
-
-    let folder = lightsFolder.addFolder('Spot Light');
-    folder.add(spotLight, 'intensity', 0, 10);
-
-    let positionFolder = folder.addFolder('Position');
-    positionFolder.add(spotLight.position, 'x', -5, 5);
-    positionFolder.add(spotLight.position, 'y', 0, 20);
-    positionFolder.add(spotLight.position, 'z', -5, 5);
-
-    let targetFolder = folder.addFolder('Target');
-    targetFolder.add(target.position, 'x', -5, 5);
-    targetFolder.add(target.position, 'z', -5, 5);
-    // targetFolder.add(target.position, 'y', 0, 20);
   }
 
   gui.folders.forEach((x) => x.close());
